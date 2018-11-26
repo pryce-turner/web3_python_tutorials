@@ -37,7 +37,10 @@ class ContractInterface(object):
 
     def deploy_contract(self, **deployment_params):
 
-        assert (self.all_interfaces is not None), "Source files not compiled, call 'compile_source_files()' and try again."
+        try:
+            self.all_interfaces is not None
+        except ValueError:
+            print("Source files not compiled, compiling now and trying again...")
 
         for interface_key in self.all_interfaces.keys():
             if self.contract_to_deploy in interface_key:
