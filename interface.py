@@ -14,14 +14,15 @@ class ContractInterface(object):
         contract_directory,
         max_deploy_gas = 3000000,
         max_tx_gas = 1000000,
+        deployment_vars_path = os.path.join(os.getcwd(), 'deployment_variables.json')
         ):
 
         self.web3 = web3
         self.contract_to_deploy = contract_to_deploy
         self.contract_directory = contract_directory
-        self.deployment_vars_path = os.path.join(os.getcwd(), 'deployment_variables.json')
         self.max_deploy_gas = max_deploy_gas
         self.max_tx_gas = max_tx_gas
+        self.deployment_vars_path = deployment_vars_path
         self.web3.eth.defaultAccount = web3.eth.coinbase
 
     def compile_source_files(self):
@@ -39,8 +40,9 @@ class ContractInterface(object):
 
         try:
             self.all_interfaces is not None
-        except ValueError:
+        except AttributeError:
             print("Source files not compiled, compiling now and trying again...")
+            self.compile_source_files()
 
         for interface_key in self.all_interfaces.keys():
             if self.contract_to_deploy in interface_key:
@@ -56,12 +58,12 @@ class ContractInterface(object):
                 if deployment_estimate < self.max_deploy_gas:
                     tx_hash = deployment.constructor().transact(transaction=deployment_params)
 
-                address = self.web3.eth.waitForTransactionReceipt(tx_hash)['contractAddress']
+                self.contract_address = self.web3.eth.waitForTransactionReceipt(tx_hash)['contractAddress']
 
-                print("Deployed {0} to: {1}".format(self.contract_to_deploy, address))
+                print("Deployed {0} to: {1}".format(self.contract_to_deploy, self.contract_address))
 
                 data = {
-                    'contract_address' : self.web3.toChecksumAddress(address),
+                    'contract_address' : self.web3.toChecksumAddress(self.contract_address),
                     'contract_abi' : deployment_interface['abi']
                 }
 
@@ -76,16 +78,18 @@ class ContractInterface(object):
             vars = json.load(read_file)
 
         try:
-            address_on_file = vars['contract_address']
-        except ValueError("No address found in {}, please call 'deploy_contract' and try again.".format(self.deployment_vars_path)):
+            self.contract_address = vars['contract_address']
+        except ValueError(
+            "No address found in {}, please call 'deploy_contract' and try again.".format(self.deployment_vars_path)
+            ):
             raise
 
-        contract_bytecode_length = len(self.web3.eth.getCode(address_on_file).hex())
+        contract_bytecode_length = len(self.web3.eth.getCode(self.contract_address).hex())
 
         if contract_bytecode_length > 4:
-            print('Contract deployed at {}. This function returns an instance object.'.format(address_on_file))
+            print('Contract deployed at {}. This function returns an instance object.'.format(self.contract_address))
         else:
-            print('Contract not deployed at {}.'.format(address_on_file))
+            print('Contract not deployed at {}.'.format(self.contract_address))
             return
 
         self.contract_instance = self.web3.eth.contract(
@@ -95,19 +99,19 @@ class ContractInterface(object):
 
         return self.contract_instance
 
-    def send (self, function_, *tx_args, **tx_params):
+    def send (self, function_, *tx_args_list, tx_params_dict=None):
 
         fxn_to_call = getattr(self.contract_instance.functions, function_)
-        built_fxn = fxn_to_call(*tx_args)
+        built_fxn = fxn_to_call(*tx_args_list)
 
-        gas_estimate = built_fxn.estimateGas(transaction=tx_params)
+        gas_estimate = built_fxn.estimateGas(transaction=tx_params_dict)
         print("Gas estimate to transact with {}: {}\n".format(function_, gas_estimate))
 
         if gas_estimate < self.max_tx_gas:
 
-            print("Sending transaction to {} with {} as arguments.\n".format(function_, tx_args))
+            print("Sending transaction to {} with {} as arguments.\n".format(function_, tx_args_list))
 
-            tx_hash = built_fxn.transact(transaction=tx_params)
+            tx_hash = built_fxn.transact(transaction=tx_params_dict)
 
             receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
 
@@ -117,11 +121,11 @@ class ContractInterface(object):
         else:
             print("Gas cost exceeds {}".format(self.max_tx_gas))
 
-    def retrieve (self, function_, *call_args):
+    def retrieve (self, function_, *call_args, tx_params_dict=None):
 
         fxn_to_call = getattr(self.contract_instance.functions, function_)
         built_fxn = fxn_to_call(*call_args)
 
-        return_values = built_fxn.call()
+        return_values = built_fxn.call(transaction=tx_params_dict)
 
         return return_values

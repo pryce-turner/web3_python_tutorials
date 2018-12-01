@@ -2,7 +2,7 @@ pragma solidity ^0.4.25;
 
 contract Owned {
 
-    address public owner;
+    address public owner = msg.sender;
     uint public creationBlock = block.number;
 
     modifier onlyBy (address _account) {

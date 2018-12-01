@@ -31,10 +31,22 @@ class TestInterface(unittest.TestCase):
 
     def test_deploy(self):
 
-        self.greeter_interface.compile_source_files()
         self.greeter_interface.deploy_contract()
 
         self.assertTrue(os.path.isfile(self.greeter_interface.deployment_vars_path))
+
+    def test_get_instance(self):
+
+        self.greeter_interface.get_instance()
+
+        self.assertEqual(self.greeter_interface.contract_instance.address, self.greeter_interface.contract_address)
+
+    def test_change_greeting(self):
+
+        argies = {'from':self.w3.eth.accounts[0]}
+
+        greeter_inst = self.greeter_interface.get_instance()
+        self.greeter_interface.send('setGreeting', 'Sup?')
 
 
 if __name__ == '__main__':
