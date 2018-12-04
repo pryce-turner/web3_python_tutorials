@@ -58,17 +58,18 @@ class ContractInterface(object):
                 if deployment_estimate < self.max_deploy_gas:
                     tx_hash = deployment.constructor().transact(transaction=deployment_params)
 
-                self.contract_address = self.web3.eth.waitForTransactionReceipt(tx_hash)['contractAddress']
+                tx_receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
+                contract_address = tx_receipt['contractAddress']
 
-                print("Deployed {0} to: {1}".format(self.contract_to_deploy, self.contract_address))
+                print("Deployed {0} to: {1}".format(self.contract_to_deploy, contract_address))
 
-                data = {
-                    'contract_address' : self.web3.toChecksumAddress(self.contract_address),
+                vars = {
+                    'contract_address' : contract_address,
                     'contract_abi' : deployment_interface['abi']
                 }
 
                 with open (self.deployment_vars_path, 'w') as write_file:
-                    json.dump(data, write_file, indent=4)
+                    json.dump(vars, write_file, indent=4)
 
                 print('Address and interface ABI for {} written to {}'.format(self.contract_to_deploy, self.deployment_vars_path))
 
@@ -99,7 +100,7 @@ class ContractInterface(object):
 
         return self.contract_instance
 
-    def send (self, function_, *tx_args_list, tx_params_dict=None):
+    def send (self, function_, *tx_args_list, event=None, tx_params_dict=None):
 
         fxn_to_call = getattr(self.contract_instance.functions, function_)
         built_fxn = fxn_to_call(*tx_args_list)
@@ -115,8 +116,27 @@ class ContractInterface(object):
 
             receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
 
-            print("Transaction receipt mined: \n")
-            pprint.pprint(dict(receipt))
+#            pprint.pprint(dict(receipt))
+
+            print(
+                "Transaction receipt mined with hash: {1}\n"
+                "on block number {2} "
+                "with a total gas usage of {3}".format(
+                    receipt['transactionHash'],
+                    receipt['blockNumber'],
+                    receipt['cumulativeGasUsed'],
+                )
+            )
+
+            # if event is not None:
+            #
+            #     event_to_call = getattr(self.contract_instance.events, event)
+            #     log_output = event_to_call().processReceipt(receipt)
+            #     print(log_output)
+            #     return receipt, log_output
+            #
+            # else:
+            #     return receipt
 
         else:
             print("Gas cost exceeds {}".format(self.max_tx_gas))

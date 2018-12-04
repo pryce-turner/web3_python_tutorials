@@ -43,10 +43,23 @@ class TestInterface(unittest.TestCase):
 
     def test_change_greeting(self):
 
-        argies = {'from':self.w3.eth.accounts[0]}
+        event = 'GreetingChange'
+        new_greeting = 'Sup?'
 
-        greeter_inst = self.greeter_interface.get_instance()
-        self.greeter_interface.send('setGreeting', 'Sup?')
+        expected_logs = {
+            'changer' : w3.eth.accounts[0],
+            'from' : 'Hello',
+            '_to' : new_greeting,
+            'event' : event
+        }
+
+        self.greeter_interface.get_instance()
+        receipt, tx_logs = self.greeter_interface.send('setGreeting', new_greeting, event=event)
+
+        self.assertTrue(receipt['blockNumber'] > 0)
+
+        for key, value in expected_logs.items():
+            self.assertEqual(tx_logs[key], expected_logs[key], "Logging output for {} inconsistent".format(key))
 
 
 if __name__ == '__main__':

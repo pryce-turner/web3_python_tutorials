@@ -3,14 +3,35 @@ from interface import ContractInterface
 from web3 import HTTPProvider, Web3
 
 w3 = Web3(HTTPProvider('http://10.10.10.61:7545'))
+contract_dir = os.path.abspath('./contracts/')
+greeter_interface = ContractInterface(w3, 'Greeter', contract_dir)
 
-address = w3.toChecksumAddress('0x92971e17aae84ddf38e880789e01a3239b1eed5d')
+greeter_interface.compile_source_files()
+greeter_interface.deploy_contract()
+greeter_interface.get_instance()
 
-event_filt = w3.eth.filter(
-    {
-        'fromBlock': 'latest',
-        'address':address
-    }
-)
+address = greeter_interface.contract_address
 
-print(dir(event_filt))
+greetings = [
+    'Hey',
+    'Hows it?',
+    'Ello?',
+    'Yo'
+]
+
+greeter_interface.send('setGreeting', 'Hey', event='GreetingChange')
+
+# for greeting in greetings:
+#     greeter_interface.send('setGreeting', greeting)
+#
+# event_filt = w3.eth.filter(
+#     {
+#         'address': address,
+#         'fromBlock': 0,
+#         'toBlock': 'latest'
+#     }
+# )
+#
+# print(greeter_interface.contract_address)
+# print(event_filt)
+# print(event_filt.get_new_entries())
