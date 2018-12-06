@@ -2,6 +2,7 @@ import os
 import unittest
 from interface import ContractInterface
 from web3 import HTTPProvider, Web3
+import pprint
 
 class TestInterface(unittest.TestCase):
 
@@ -44,23 +45,26 @@ class TestInterface(unittest.TestCase):
     def test_change_greeting(self):
 
         event = 'GreetingChange'
-        new_greeting = 'Sup?'
+        new_greeting = 'Sup?'.encode('utf-8')
 
         expected_logs = {
-            'changer' : w3.eth.accounts[0],
-            'from' : 'Hello',
+            'changer' : self.w3.eth.accounts[0],
+            '_from' : 'Hello',
             '_to' : new_greeting,
             'event' : event
         }
 
         self.greeter_interface.get_instance()
-        receipt, tx_logs = self.greeter_interface.send('setGreeting', new_greeting, event=event)
+        receipt, indexed_events = self.greeter_interface.send('setGreeting', new_greeting, event=event)
 
         self.assertTrue(receipt['blockNumber'] > 0)
 
-        for key, value in expected_logs.items():
-            self.assertEqual(tx_logs[key], expected_logs[key], "Logging output for {} inconsistent".format(key))
+        # print("\n\n")
+        # print("\n\n")
 
+        self.assertEqual(indexed_events['changer'], expected_logs['changer'], "Logging output for {} inconsistent".format('changer'))
+        self.assertEqual(indexed_events['_from'], expected_logs['_from'], "Logging output for {} inconsistent".format('_from'))
+        self.assertEqual(indexed_events['changer'], expected_logs['changer'], "Logging output for {} inconsistent".format('changer'))
 
 if __name__ == '__main__':
     unittest.main()

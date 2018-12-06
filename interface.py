@@ -2,6 +2,7 @@ import os
 import pprint
 import json
 
+from hexbytes import HexBytes
 from web3 import Web3, HTTPProvider
 from solc import compile_source, compile_files
 
@@ -119,24 +120,24 @@ class ContractInterface(object):
 #            pprint.pprint(dict(receipt))
 
             print(
-                "Transaction receipt mined with hash: {1}\n"
-                "on block number {2} "
-                "with a total gas usage of {3}".format(
-                    receipt['transactionHash'],
-                    receipt['blockNumber'],
-                    receipt['cumulativeGasUsed'],
+                ("Transaction receipt mined with hash: {hash}\n"
+                "on block number {blockNum} "
+                "with a total gas usage of {totalGas}").format(
+                    hash = receipt['transactionHash'].hex(),
+                    blockNum = receipt['blockNumber'],
+                    totalGas = receipt['cumulativeGasUsed']
+                    )
                 )
-            )
 
-            # if event is not None:
-            #
-            #     event_to_call = getattr(self.contract_instance.events, event)
-            #     log_output = event_to_call().processReceipt(receipt)
-            #     print(log_output)
-            #     return receipt, log_output
-            #
-            # else:
-            #     return receipt
+            if event is not None:
+
+                event_to_call = getattr(self.contract_instance.events, event)
+                raw_log_output = event_to_call().processReceipt(receipt)
+                indexed_events = clean_logs(raw_log_output)
+                return receipt, indexed_events
+
+            else:
+                return receipt
 
         else:
             print("Gas cost exceeds {}".format(self.max_tx_gas))
@@ -149,3 +150,13 @@ class ContractInterface(object):
         return_values = built_fxn.call(transaction=tx_params_dict)
 
         return return_values
+
+def clean_logs(log_output):
+    indexed_events = log_output[0]['args']
+    cleaned_events = {}
+    for key, value in indexed_events.items():
+        if type(value) == bytes:
+            cleaned_events[key] = value.decode('utf-8').rstrip("\x00")
+        else:
+            cleaned_events[key] = value
+    return cleaned_events
