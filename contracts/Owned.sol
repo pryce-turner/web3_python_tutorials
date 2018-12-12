@@ -1,8 +1,8 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.5.1;
 
 contract Owned {
 
-    address public owner = msg.sender;
+    address payable public owner = msg.sender;
     uint public creationBlock = block.number;
 
     modifier onlyBy (address _account) {
@@ -10,7 +10,7 @@ contract Owned {
         _;
     }
 
-    function changeOwner (address _newOwner) public onlyBy (owner) {
+    function changeOwner (address payable _newOwner) public onlyBy (owner) {
         owner = _newOwner;
     }
 

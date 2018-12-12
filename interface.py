@@ -53,7 +53,7 @@ class ContractInterface(object):
         absolute paths to be passed to the py-solc's 'compile_files' method.
 
         Returns:
-            self.all_interfaces (dict): all the compiler outputs (abi, bin, ast...)
+            self.all_compiled_contracts (dict): all the compiler outputs (abi, bin, ast...)
             for every contract in contract_directory
         """
 
@@ -62,9 +62,9 @@ class ContractInterface(object):
         for contract in os.listdir(self.contract_directory):
             deployment_list.append(os.path.join(self.contract_directory, contract))
 
-        self.all_interfaces = compile_files(deployment_list)
+        self.all_compiled_contracts = compile_files(deployment_list)
 
-        print('Compiled interface keys:\n{}'.format('\n'.join(self.all_interfaces.keys())))
+        print('Compiled interface keys:\n{}'.format('\n'.join(self.all_compiled_contracts.keys())))
 
     def deploy_contract(self, deployment_params=None):
         """Deploys contract specified by 'contract_to_deploy'
@@ -81,18 +81,18 @@ class ContractInterface(object):
         """
 
         try:
-            self.all_interfaces is not None
+            self.all_compiled_contracts is not None
         except AttributeError:
             print("Source files not compiled, compiling now and trying again...")
             self.compile_source_files()
 
-        for interface_key in self.all_interfaces.keys():
-            if self.contract_to_deploy in interface_key:
-                deployment_interface = self.all_interfaces[interface_key]
+        for compiled_contract_key in self.all_compiled_contracts.keys():
+            if self.contract_to_deploy in compiled_contract_key:
+                deployment_compiled = self.all_compiled_contracts[compiled_contract_key]
 
                 deployment = self.web3.eth.contract(
-                    abi=deployment_interface['abi'],
-                    bytecode=deployment_interface['bin']
+                    abi=deployment_compiled['abi'],
+                    bytecode=deployment_compiled['bin']
                     )
 
                 deployment_estimate = deployment.constructor().estimateGas(transaction=deployment_params)
@@ -111,7 +111,7 @@ class ContractInterface(object):
 
                 vars = {
                     'contract_address' : contract_address,
-                    'contract_abi' : deployment_interface['abi']
+                    'contract_abi' : deployment_compiled['abi']
                 }
 
                 with open (self.deployment_vars_path, 'w') as write_file:
