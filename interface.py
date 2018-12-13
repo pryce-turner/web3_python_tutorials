@@ -64,7 +64,7 @@ class ContractInterface(object):
 
         self.all_compiled_contracts = compile_files(deployment_list)
 
-        print('Compiled interface keys:\n{}'.format('\n'.join(self.all_compiled_contracts.keys())))
+        print('Compiled contract keys:\n{}'.format('\n'.join(self.all_compiled_contracts.keys())))
 
     def deploy_contract(self, deployment_params=None):
         """Deploys contract specified by 'contract_to_deploy'
@@ -143,11 +143,13 @@ class ContractInterface(object):
 
         contract_bytecode_length = len(self.web3.eth.getCode(self.contract_address).hex())
 
-        if contract_bytecode_length > 4:
-            print('Contract deployed at {}. This function returns an instance object.'.format(self.contract_address))
+        try:
+            assert (contract_bytecode_length > 4), "Contract not deployed at {}.".format(self.contract_address)
+        except AssertionError as e:
+            print(e)
+            raise
         else:
-            print('Contract not deployed at {}.'.format(self.contract_address))
-            return
+            print('Contract deployed at {}. This function returns an instance object.'.format(self.contract_address))
 
         self.contract_instance = self.web3.eth.contract(
             abi = vars['contract_abi'],
