@@ -6,9 +6,9 @@ contract Greeter is Owned {
     bytes32 public greeting;
 
     event GreetingChange (
-      address indexed changer,
-      bytes32 indexed _from,
-      bytes32 indexed _to
+        address indexed changer,
+        bytes32 indexed _from,
+        bytes32 indexed _to
     );
 
     constructor() public {

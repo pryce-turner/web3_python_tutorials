@@ -15,6 +15,8 @@ class ContractInterface(object):
     methods for transacting and calling with gas checks and event output.
     """
 
+    default_vars_path = os.path.join(os.getcwd(), 'deployment_variables.json')
+
     def __init__(
         self,
         web3,
@@ -22,7 +24,7 @@ class ContractInterface(object):
         contract_directory,
         max_deploy_gas = 500000,
         max_tx_gas = 50000,
-        deployment_vars_path = os.path.join(os.getcwd(), 'deployment_variables.json')
+        deployment_vars_path = default_vars_path
         ):
         """Accepts contract, directory, and an RPC connection and sets defaults
 
@@ -64,7 +66,9 @@ class ContractInterface(object):
 
         self.all_compiled_contracts = compile_files(deployment_list)
 
-        print('Compiled contract keys:\n{}'.format('\n'.join(self.all_compiled_contracts.keys())))
+        print("Compiled contract keys:\n{}".format(
+            '\n'.join(self.all_compiled_contracts.keys()
+            )))
 
     def deploy_contract(self, deployment_params=None):
         """Deploys contract specified by 'contract_to_deploy'
@@ -117,7 +121,7 @@ class ContractInterface(object):
                 with open (self.deployment_vars_path, 'w') as write_file:
                     json.dump(vars, write_file, indent=4)
 
-                print('Address and interface ABI for {0} written to {1}'.format(self.contract_to_deploy, self.deployment_vars_path))
+                print(f"Address and interface ABI for {self.contract_to_deploy} written to {self.deployment_vars_path}")
 
     def get_instance(self):
         """Returns a contract instance object from variables in 'deployment_vars'
@@ -137,19 +141,19 @@ class ContractInterface(object):
         try:
             self.contract_address = vars['contract_address']
         except ValueError(
-            "No address found in {}, please call 'deploy_contract' and try again.".format(self.deployment_vars_path)
+            f"No address found in {self.deployment_vars_path}, please call 'deploy_contract' and try again."
             ):
             raise
 
         contract_bytecode_length = len(self.web3.eth.getCode(self.contract_address).hex())
 
         try:
-            assert (contract_bytecode_length > 4), "Contract not deployed at {}.".format(self.contract_address)
+            assert (contract_bytecode_length > 4), f"Contract not deployed at {self.contract_address}."
         except AssertionError as e:
             print(e)
             raise
         else:
-            print('Contract deployed at {}. This function returns an instance object.'.format(self.contract_address))
+            print(f"Contract deployed at {self.contract_address}. This function returns an instance object.")
 
         self.contract_instance = self.web3.eth.contract(
             abi = vars['contract_abi'],
@@ -187,38 +191,29 @@ class ContractInterface(object):
         built_fxn = fxn_to_call(*tx_args)
 
         gas_estimate = built_fxn.estimateGas(transaction=tx_params)
-        print("Gas estimate to transact with {}: {}\n".format(function_, gas_estimate))
+        print(f"Gas estimate to transact with {function_}: {gas_estimate}\n")
 
         if gas_estimate < self.max_tx_gas:
 
-            print("Sending transaction to {} with {} as arguments.\n".format(function_, tx_args))
+            print(f"Sending transaction to {function_} with {tx_args} as arguments.\n")
 
             tx_hash = built_fxn.transact(transaction=tx_params)
 
             receipt = self.web3.eth.waitForTransactionReceipt(tx_hash)
 
-            print(
-                ("Transaction receipt mined with hash: {hash}\n"
-                "on block number {blockNum} "
-                "with a total gas usage of {totalGas}").format(
-                    hash = receipt['transactionHash'].hex(),
-                    blockNum = receipt['blockNumber'],
-                    totalGas = receipt['cumulativeGasUsed']
-                    )
-                )
+            print((
+                f"Transaction receipt mined with hash: {receipt['transactionHash'].hex()} "
+                f"on block number {receipt['blockNumber']} "
+                f"with a total gas usage of {receipt['cumulativeGasUsed']}\n"
+                ))
 
             if event is not None:
 
                 event_to_call = getattr(self.contract_instance.events, event)
                 raw_log_output = event_to_call().processReceipt(receipt)
-                indexed_events = raw_log_output[0]['args']
-                cleaned_events = {}
-                for key, value in indexed_events.items():
-                    if type(value) == bytes:
-                        cleaned_events[key] = value.decode('utf-8').rstrip("\x00")
-                    else:
-                        cleaned_events[key] = value
-                return receipt, cleaned_events
+                indexed_events = clean_logs(raw_log_output)
+
+                return receipt, indexed_events
 
             else:
                 return receipt
@@ -233,6 +228,20 @@ class ContractInterface(object):
         built_fxn = fxn_to_call(*call_args)
 
         return_values = built_fxn.call(transaction=tx_params)
-        return_string = return_values.decode('utf-8').rstrip("\x00")
+        cleaned_output = clean_logs(return_values)
 
-        return return_string
+        return cleaned_output
+
+def clean_logs(log_output):
+    indexed_events = log_output[0]['args']
+    cleaned_events = {}
+    for key, value in indexed_events.items():
+        if type(value) == bytes:
+            try:
+                cleaned_events[key] = value.decode('utf-8').rstrip("\x00")
+            except UnicodeDecodeError:
+                cleaned_events[key] = Web3.toHex(value)
+        else:
+            cleaned_events[key] = value
+    print(f"Indexed Events: {cleaned_events}")
+    return cleaned_events
