@@ -6,9 +6,8 @@ sudo apt-get upgrade -y
 
 sudo apt-get install -y libssl-dev build-essential automake pkg-config libtool libffi-dev libgmp-dev libyaml-cpp-dev python python3-pip solc
 
-# Install web3
-pip3 install web3 py-solc
-pip3 install git+https://github.com/iamdefinitelyahuman/py-solc.git
+# Install web3 and solc wrapper
+pip3 install web3 py-solc-x
 
 # Install node
 echo "Run the following in new terminals to finish provisioning"
