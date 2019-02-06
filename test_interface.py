@@ -28,7 +28,7 @@ class TestInterface(unittest.TestCase):
 
         self.greeter_interface.compile_source_files()
 
-        self.assertEqual(len(self.greeter_interface.all_compiled_contracts), 2)
+        self.assertEqual(len(self.greeter_interface.all_compiled_contracts), 3)
 
     def test_3_deploy(self):
 

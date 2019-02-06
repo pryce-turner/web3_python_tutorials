@@ -4,7 +4,7 @@ import json
 
 from hexbytes import HexBytes
 from web3 import Web3, HTTPProvider
-from solc import compile_source, compile_files
+from solcx import compile_source, compile_files
 
 class ContractInterface(object):
     """A convenience interface for interacting with ethereum smart contracts
@@ -52,7 +52,7 @@ class ContractInterface(object):
         """Compiles 'contract_to_deploy' from specified contract.
 
         Loops through contracts in 'contract_directory' and creates a list of
-        absolute paths to be passed to the py-solc's 'compile_files' method.
+        absolute paths to be passed to the py-solc-x's 'compile_files' method.
 
         Returns:
             self.all_compiled_contracts (dict): all the compiler outputs (abi, bin, ast...)
@@ -228,9 +228,11 @@ class ContractInterface(object):
         built_fxn = fxn_to_call(*call_args)
 
         return_values = built_fxn.call(transaction=tx_params)
-        cleaned_output = clean_logs(return_values)
 
-        return cleaned_output
+        if type(return_values) == bytes:
+            return_values = return_values.decode('utf-8').rstrip("\x00")
+
+        return return_values
 
 def clean_logs(log_output):
     indexed_events = log_output[0]['args']
